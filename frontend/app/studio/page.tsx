@@ -91,6 +91,7 @@ function UploadTab() {
   const [msgHistory, setMsgHistory]   = useState<any[]>([]);
   const [loading, setLoading]         = useState(false);
   const [started, setStarted]         = useState(false);
+  const [imagePath, setImagePath]     = useState("");
   const inputRef                      = useRef<HTMLInputElement>(null);
   const chatRef                       = useRef<HTMLDivElement>(null);
 
@@ -123,7 +124,8 @@ function UploadTab() {
       setSessionId(data.session_id);
       setMsgHistory(data.messages || []);
       setMessages([{ role: "assistant", content: data.response }]);
-      setStarted(true);
+      setImagePath(data.image_path || "");
+      setStarted(true);      
     } catch (e) {
       setMessages([{ role: "assistant", content: "Failed to connect to backend. Make sure FastAPI is running." }]);
     } finally {
@@ -143,9 +145,10 @@ function UploadTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionId,
-          message:    userMsg,
-          messages:   msgHistory,
+          session_id:  sessionId,
+          message:     userMsg,
+          messages:    msgHistory,
+          image_path:  imagePath,
         }),
       });
       const data = await res.json();
@@ -418,8 +421,14 @@ function NodesTab() {
                 <p className="label" style={{ marginBottom: "10px" }}>Images ({selected.images.length})</p>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   {selected.images.map((img) => (
-                    <div key={img.id} style={{ width: "120px", height: "90px", background: "var(--surface)", borderRadius: "8px", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <p style={{ fontSize: "10px", color: "var(--text-dim)", textAlign: "center", padding: "8px" }}>{img.image_path}</p>
+                    <div key={img.id} style={{ width: "140px", height: "100px", background: "var(--surface)", borderRadius: "8px", border: "1px solid var(--border)", overflow: "hidden" }}>
+                      {img.image_path && img.image_path.startsWith("http") ? (
+                        <img src={img.image_path} alt={img.angle} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", padding: "8px" }}>
+                          <p style={{ fontSize: "10px", color: "var(--text-dim)", textAlign: "center" }}>{img.image_path || "No image"}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from backend.agents.builder import start_builder_session, continue_builder_session
+from backend.services.s3 import upload_image
 from backend.services.aurora import (
     get_all_locations,
     get_location,
@@ -76,10 +77,19 @@ async def studio_analyze(
         contents  = await file.read()
         image_b64 = base64.b64encode(contents).decode("utf-8")
         mime      = file.content_type or "image/jpeg"
-        image_path = file.filename or "uploaded_image.jpg"
+        filename  = file.filename or "uploaded_image.jpg"
 
         if not session_id:
             session_id = str(uuid.uuid4())
+
+        # Upload image to S3
+        try:
+            s3_url = upload_image(contents, filename, mime)
+        except Exception as s3_err:
+            log.warning("S3 upload failed: %s", s3_err)
+            s3_url = filename
+
+        image_path = s3_url
 
         # Start BUILDER agent session
         result = start_builder_session(
@@ -101,6 +111,7 @@ async def studio_analyze(
             "response":    result["response"],
             "messages":    result["messages"],
             "is_complete": result.get("is_complete", False),
+            "image_path":  image_path,
         })
 
     except Exception as e:
@@ -115,13 +126,20 @@ async def studio_chat(req: BuilderChatRequest):
     Send user message  agent responds with next question or saves node.
     """
     try:
+        # Get image_path from session if not provided
+        image_path = req.image_path
+        if not image_path:
+            session = get_session(req.session_id)
+            if session:
+                image_path = session.get("current_node", "")
+
         result = continue_builder_session(
             session_id=req.session_id,
             user_message=req.message,
             messages=req.messages,
             image_b64=req.image_b64,
             image_mime=req.image_mime,
-            image_path=req.image_path,
+            image_path=image_path,
         )
 
         # Update session in DynamoDB
@@ -150,8 +168,30 @@ async def studio_get_nodes():
     """Get all location nodes with their images and connections."""
     try:
         graph = get_full_graph()
-        return JSONResponse(content={"nodes": [dict(n) for n in graph]})
+        clean = []
+        for node in graph:
+            clean_node = {}
+            for k, v in node.items():
+                if k == "images":
+                    clean_node[k] = [
+                        {ik: str(iv) if not isinstance(iv, (str, int, float, bool, type(None))) else iv
+                         for ik, iv in img.items()}
+                        for img in v
+                    ]
+                elif k == "connections":
+                    clean_node[k] = [
+                        {ck: str(cv) if not isinstance(cv, (str, int, float, bool, type(None))) else cv
+                         for ck, cv in conn.items()}
+                        for conn in v
+                    ]
+                elif not isinstance(v, (str, int, float, bool, type(None))):
+                    clean_node[k] = str(v)
+                else:
+                    clean_node[k] = v
+            clean.append(clean_node)
+        return JSONResponse(content={"nodes": clean})
     except Exception as e:
+        log.error("Get nodes error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -66,12 +66,11 @@ def insert_location(node: dict):
 
 
 def get_all_locations():
-    """Get all location nodes."""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM locations ORDER BY created_at ASC")
-            return cur.fetchall()
+            return [dict(row) for row in cur.fetchall()]
     finally:
         conn.close()
 
@@ -244,12 +243,11 @@ def get_full_graph():
         images  = get_location_images(node_id)
         conns   = get_connections(node_id)
         result.append({
-            **loc,
-            "images":      list(images),
-            "connections": list(conns),
+            **dict(loc),
+            "images":      [dict(i) for i in images],
+            "connections": [dict(c) for c in conns],
         })
     return result
-
 
 def get_location_with_details(node_id: str):
     """Get a location with all its images and connections."""

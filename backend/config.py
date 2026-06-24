@@ -19,6 +19,10 @@ AWS_REGION: str = os.getenv("AWS_REGION", "ap-southeast-2")
 AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 
+# ── S3 ──────────────────────────────────────────
+S3_BUCKET: str = os.getenv("S3_BUCKET", "")
+S3_REGION: str = os.getenv("S3_REGION", "ap-southeast-2")
+
 # ── App ───────────────────────────────────────────────
 APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
 APP_PORT: int = int(os.getenv("APP_PORT", "8000"))
