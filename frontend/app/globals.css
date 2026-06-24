@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital@1&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg:           #0D0D0D;
+  --surface:      #141414;
+  --surface-2:    #1A1A1A;
+  --border:       #222222;
+  --border-hover: #333333;
+  --accent:       #2EC4B6;
+  --accent-dark:  #1FA39A;
+  --accent-glow:  rgba(46, 196, 182, 0.15);
+  --text:         #F0F0F0;
+  --text-muted:   #666666;
+  --text-dim:     #444444;
+  --danger:       #E05555;
+  --success:      #4CAF7D;
+  --warning:      #E0A850;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Selection */
+::selection {
+  background: var(--accent);
+  color: #000;
+}
+
+/* Focus */
+*:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Logo font */
+.font-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-logo-italic {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: var(--border-hover);
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary:hover {
+  background: var(--accent-dark);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-danger:hover {
+  background: rgba(224, 85, 85, 0.1);
+}
+
+/* Inputs */
+.input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  transition: border-color 0.2s;
+
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--text-dim);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Labels */
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Divider */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.badge-accent {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid rgba(46, 196, 182, 0.3);
+}
+
+.badge-success {
+  background: rgba(76, 175, 125, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(76, 175, 125, 0.3);
+}
+
+.badge-warning {
+  background: rgba(224, 168, 80, 0.1);
+  color: var(--warning);
+  border: 1px solid rgba(224, 168, 80, 0.3);
+}
+
+.badge-danger {
+  background: rgba(224, 85, 85, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(224, 85, 85, 0.3);
+}
+
+/* Accent line */
+.accent-line {
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-accent {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50%       { box-shadow: 0 0 0 6px transparent; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Glow effect */
+.glow-accent {
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* Status dot */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.active  { background: var(--success); }
+.status-dot.pending { background: var(--warning); animation: pulse-accent 2s infinite; }
+.status-dot.error   { background: var(--danger); }

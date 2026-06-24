@@ -1,0 +1,271 @@
+"""
+Inevi API Routes
+=================
+FastAPI routes for Map Studio (BUILDER agent) and Traverse (navigation).
+"""
+
+import os
+import uuid
+import base64
+import logging
+import traceback
+from typing import Optional
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from backend.agents.builder import start_builder_session, continue_builder_session
+from backend.services.aurora import (
+    get_all_locations,
+    get_location,
+    get_location_with_details,
+    get_full_graph,
+    get_all_connections,
+    insert_connection,
+    delete_location,
+    delete_connection,
+)
+from backend.services.dynamo import (
+    create_session,
+    get_session,
+    update_session,
+    append_to_conversation,
+)
+
+log = logging.getLogger("inevi")
+
+router = APIRouter(prefix="/api", tags=["inevi"])
+
+
+#  Health 
+
+@router.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "service": "Inevi API",
+        "agents": ["BUILDER", "IRIS", "LOKI", "SAGE", "NOVA", "VEDA"],
+    }
+
+
+# 
+#  MAP STUDIO  BUILDER AGENT
+# 
+
+class BuilderChatRequest(BaseModel):
+    session_id:  str
+    message:     str
+    messages:    list
+    image_b64:   Optional[str] = ""
+    image_mime:  Optional[str] = "image/jpeg"
+    image_path:  Optional[str] = ""
+
+
+@router.post("/studio/analyze")
+async def studio_analyze(
+    file:          UploadFile = File(...),
+    location_name: str        = Form(...),
+    session_id:    str        = Form(default=""),
+):
+    """
+    Start a BUILDER agent session.
+    Upload an image + location name  agent analyzes and starts asking questions.
+    """
+    try:
+        # Read and encode image
+        contents  = await file.read()
+        image_b64 = base64.b64encode(contents).decode("utf-8")
+        mime      = file.content_type or "image/jpeg"
+        image_path = file.filename or "uploaded_image.jpg"
+
+        if not session_id:
+            session_id = str(uuid.uuid4())
+
+        # Start BUILDER agent session
+        result = start_builder_session(
+            image_b64=image_b64,
+            image_mime=mime,
+            image_path=image_path,
+            location_name=location_name,
+            session_id=session_id,
+        )
+
+        # Store session in DynamoDB
+        create_session(session_id, {
+            "current_node": "",
+            "conversation": result.get("messages", []),
+        })
+
+        return JSONResponse(content={
+            "session_id":  session_id,
+            "response":    result["response"],
+            "messages":    result["messages"],
+            "is_complete": result.get("is_complete", False),
+        })
+
+    except Exception as e:
+        log.error("BUILDER error: %s\n%s", e, traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/studio/chat")
+async def studio_chat(req: BuilderChatRequest):
+    """
+    Continue BUILDER agent conversation.
+    Send user message  agent responds with next question or saves node.
+    """
+    try:
+        result = continue_builder_session(
+            session_id=req.session_id,
+            user_message=req.message,
+            messages=req.messages,
+            image_b64=req.image_b64,
+            image_mime=req.image_mime,
+            image_path=req.image_path,
+        )
+
+        # Update session in DynamoDB
+        append_to_conversation(req.session_id, {
+            "role":    "user",
+            "content": req.message,
+        })
+        append_to_conversation(req.session_id, {
+            "role":    "assistant",
+            "content": result["response"],
+        })
+
+        return JSONResponse(content={
+            "session_id":  req.session_id,
+            "response":    result["response"],
+            "messages":    result["messages"],
+            "is_complete": result.get("is_complete", False),
+        })
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/studio/nodes")
+async def studio_get_nodes():
+    """Get all location nodes with their images and connections."""
+    try:
+        graph = get_full_graph()
+        return JSONResponse(content={"nodes": [dict(n) for n in graph]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/studio/nodes/{node_id}")
+async def studio_get_node(node_id: str):
+    """Get a single location node with all details."""
+    try:
+        node = get_location_with_details(node_id)
+        if not node:
+            raise HTTPException(status_code=404, detail="Node not found")
+        return JSONResponse(content={"node": dict(node)})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/studio/nodes/{node_id}")
+async def studio_delete_node(node_id: str):
+    """Delete a location node and all its connections."""
+    try:
+        delete_location(node_id)
+        return JSONResponse(content={"message": f"Node '{node_id}' deleted successfully"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ConnectionRequest(BaseModel):
+    from_node:        str
+    to_node:          str
+    direction:        str
+    instruction:      Optional[str] = ""
+    distance_meters:  Optional[int] = 0
+
+
+@router.post("/studio/connections")
+async def studio_add_connection(req: ConnectionRequest):
+    """Manually add a connection between two nodes."""
+    try:
+        conn_id = insert_connection({
+            "from_node":       req.from_node,
+            "to_node":         req.to_node,
+            "direction":       req.direction,
+            "instruction":     req.instruction,
+            "distance_meters": req.distance_meters,
+        })
+        return JSONResponse(content={
+            "message":    "Connection added successfully",
+            "connection_id": conn_id,
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/studio/connections/{conn_id}")
+async def studio_delete_connection(conn_id: str):
+    """Delete a connection."""
+    try:
+        delete_connection(conn_id)
+        return JSONResponse(content={"message": "Connection deleted successfully"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/studio/graph")
+async def studio_get_graph():
+    """Get the full knowledge graph  all nodes and connections."""
+    try:
+        nodes       = get_full_graph()
+        connections = get_all_connections()
+        return JSONResponse(content={
+            "nodes":       [dict(n) for n in nodes],
+            "connections": [dict(c) for c in connections],
+            "total_nodes": len(nodes),
+            "total_connections": len(connections),
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 
+#  TRAVERSE  NAVIGATION (placeholder for now)
+# 
+
+class NavigationRequest(BaseModel):
+    session_id:  str
+    image_b64:   str
+    destination: Optional[str] = ""
+    language:    Optional[str] = "en"
+
+
+@router.post("/traverse/start")
+async def traverse_start(req: NavigationRequest):
+    """
+    Start a navigation session.
+    IRIS + LOKI agents will identify location from camera frame.
+    """
+    # TODO: Connect IRIS  LOKI  SAGE  NOVA  VEDA pipeline
+    return JSONResponse(content={
+        "session_id": req.session_id,
+        "message":    "Navigation session started. Agents coming soon!",
+        "status":     "placeholder",
+    })
+
+
+@router.post("/traverse/frame")
+async def traverse_frame(req: NavigationRequest):
+    """
+    Process a live camera frame.
+    Returns navigation guidance from the agent pipeline.
+    """
+    # TODO: Full agent pipeline
+    return JSONResponse(content={
+        "session_id": req.session_id,
+        "guidance":   "Navigation guidance coming soon!",
+        "status":     "placeholder",
+    })
