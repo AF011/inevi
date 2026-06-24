@@ -15,6 +15,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from backend.agents.builder import start_builder_session, continue_builder_session
+from backend.orchestrator.graph import (
+    start_traverse_session,
+    process_frame,
+    process_user_speech,
+    load_nav_session,
+    NavigationSession,
+)
 from backend.services.s3 import upload_image
 from backend.services.aurora import (
     get_all_locations,
@@ -283,29 +290,105 @@ class NavigationRequest(BaseModel):
     language:    Optional[str] = "en"
 
 
+
+
+class TraverseStartRequest(BaseModel):
+    session_id: Optional[str] = None
+    language:   Optional[str] = "en"
+
+
+class TraverseFrameRequest(BaseModel):
+    session_id:  str
+    image_b64:   str
+    image_mime:  Optional[str] = "image/jpeg"
+    language:    Optional[str] = "en"
+
+
+class TraverseSpeechRequest(BaseModel):
+    session_id:   str
+    user_speech:  str
+    language:     Optional[str] = "en"
+
 @router.post("/traverse/start")
-async def traverse_start(req: NavigationRequest):
-    """
-    Start a navigation session.
-    IRIS + LOKI agents will identify location from camera frame.
-    """
-    # TODO: Connect IRIS  LOKI  SAGE  NOVA  VEDA pipeline
-    return JSONResponse(content={
-        "session_id": req.session_id,
-        "message":    "Navigation session started. Agents coming soon!",
-        "status":     "placeholder",
-    })
+async def traverse_start(req: TraverseStartRequest):
+    """Start a Traverse navigation session."""
+    try:
+        result = start_traverse_session(
+            session_id=req.session_id or None,
+            language=req.language or "en",
+        )
+        return JSONResponse(content={
+            "session_id":    result["session_id"],
+            "veda_response": result["veda_response"],
+            "status":        "started",
+        })
+    except Exception as e:
+        log.error("Traverse start error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/traverse/frame")
-async def traverse_frame(req: NavigationRequest):
+async def traverse_frame(req: TraverseFrameRequest):
     """
-    Process a live camera frame.
-    Returns navigation guidance from the agent pipeline.
+    Process a live camera frame through IRIS -> LOKI pipeline.
+    Called every 3 seconds from frontend camera.
     """
-    # TODO: Full agent pipeline
-    return JSONResponse(content={
-        "session_id": req.session_id,
-        "guidance":   "Navigation guidance coming soon!",
-        "status":     "placeholder",
-    })
+    try:
+        session = load_nav_session(req.session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        result = process_frame(
+            session=session,
+            image_b64=req.image_b64,
+            image_mime=req.image_mime or "image/jpeg",
+        )
+
+        return JSONResponse(content={
+            "session_id":    req.session_id,
+            "has_response":  result["has_response"],
+            "veda_response": result["veda_response"],
+            "location": {
+                "matched":    result["loki"]["matched"],
+                "node_id":    result["loki"]["node_id"],
+                "name":       result["loki"]["name"],
+                "confidence": result["loki"]["confidence"],
+            },
+            "scene":  result["iris"]["scene_description"],
+            "status": result["session"]["status"],
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Traverse frame error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/traverse/speech")
+async def traverse_speech(req: TraverseSpeechRequest):
+    """
+    Process user speech through VEDA -> SAGE -> NOVA pipeline.
+    Called when user speaks during navigation.
+    """
+    try:
+        session = load_nav_session(req.session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        result = process_user_speech(
+            session=session,
+            user_speech=req.user_speech,
+        )
+
+        return JSONResponse(content={
+            "session_id":    req.session_id,
+            "veda_response": result["veda_response"],
+            "intent":        result["intent"]["intent"],
+            "destination":   result["intent"].get("destination"),
+            "status":        result["session"]["status"],
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Traverse speech error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))

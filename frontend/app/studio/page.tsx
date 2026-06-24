@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Upload, MapPin, GitBranch, Plus, Trash2, ChevronRight, Loader } from "lucide-react";
 
-const API = "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ── Types ─────────────────────────────────────────────
 interface Message {
@@ -125,7 +125,8 @@ function UploadTab() {
       setMsgHistory(data.messages || []);
       setMessages([{ role: "assistant", content: data.response }]);
       setImagePath(data.image_path || "");
-      setStarted(true);      
+      setStarted(true);
+      console.log("S3 image path:", data.image_path);
     } catch (e) {
       setMessages([{ role: "assistant", content: "Failed to connect to backend. Make sure FastAPI is running." }]);
     } finally {
