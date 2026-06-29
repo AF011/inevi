@@ -176,6 +176,19 @@ AWS Services used: Aurora DSQL, DynamoDB, S3
 
 ---
 
+---
+
+## Team
+
+**Nocturne Syndicate**
+
+| Role | Name | GitHub |
+|------|------|--------|
+| Team Leader | Abdul Faheem | [@AF011](https://github.com/AF011) |
+| Member | Gandham Mani Saketh | [@Saketh07](https://github.com/Saketh07) |
+
+---
+
 <div align="center">
   <sub>An AF's Endeavor &nbsp;|&nbsp; Developed with 🥤 and 💡</sub>
 </div>
