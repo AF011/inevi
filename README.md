@@ -185,7 +185,7 @@ AWS Services used: Aurora DSQL, DynamoDB, S3
 | Role | Name | GitHub |
 |------|------|--------|
 | Team Leader | Abdul Faheem | [@AF011](https://github.com/AF011) |
-| Member | Gandham Mani Saketh | [@Saketh07](https://github.com/Saketh07) |
+| Member | Gandham Mani Saketh | [@Saketh07](https://github.com/GANDHAMMANI) |
 
 ---
 
