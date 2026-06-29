@@ -338,10 +338,6 @@ async def traverse_frame(req: TraverseFrameRequest):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Keep session language in sync with what frontend sends
-        if req.language and req.language != session["language"]:
-            session["language"] = req.language
-
         result = process_frame(
             session=session,
             image_b64=req.image_b64,
@@ -379,30 +375,15 @@ async def traverse_speech(req: TraverseSpeechRequest):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Keep session language in sync with what frontend sends
-        if req.language and req.language != session["language"]:
-            session["language"] = req.language
-
         result = process_user_speech(
             session=session,
             user_speech=req.user_speech,
         )
 
-        # Don't send anything back if echo was filtered
-        intent_type = result["intent"].get("intent", "unknown")
-        if intent_type == "echo_ignored":
-            return JSONResponse(content={
-                "session_id":    req.session_id,
-                "veda_response": None,
-                "intent":        "echo_ignored",
-                "destination":   None,
-                "status":        result["session"]["status"],
-            })
-
         return JSONResponse(content={
             "session_id":    req.session_id,
             "veda_response": result["veda_response"],
-            "intent":        intent_type,
+            "intent":        result["intent"]["intent"],
             "destination":   result["intent"].get("destination"),
             "status":        result["session"]["status"],
         })
@@ -411,3 +392,109 @@ async def traverse_speech(req: TraverseSpeechRequest):
     except Exception as e:
         log.error("Traverse speech error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+# ── Anam Avatar Token ─────────────────────────────────────────────────────────
+
+ANAM_KEYS = [
+    os.getenv("ANAM_API_KEY_1", ""),
+]
+ANAM_KEYS = [k for k in ANAM_KEYS if k.strip()]
+
+# Persona IDs — each avatar has its own persona created in Anam Lab
+ANAM_PERSONAS = {
+    "finn":   os.getenv("ANAM_PERSONA_FINN",   "b023afd6-7ce9-4ca8-954f-4a606f7cc52e"),
+    "hunter": os.getenv("ANAM_PERSONA_HUNTER", "60206382-ef77-4fe4-bd35-02da73b0e2a4"),
+    "kevin":  os.getenv("ANAM_PERSONA_KEVIN",  "c9c15a9d-eff7-40c1-9ada-f746b6ce547a"),
+    "mia":    os.getenv("ANAM_PERSONA_MIA",    "b7e4e7f3-058c-4f85-9eb2-67372774c853"),
+    "layla":  os.getenv("ANAM_PERSONA_LAYLA",  "01bd713b-3188-4f0b-82e6-0f7d97f2fc8c"),
+    "emily":  os.getenv("ANAM_PERSONA_EMILY",  "23e3626b-9ccb-4cd8-a247-2b019831daa3"),
+}
+
+_anam_key_index = 0
+
+
+def _next_anam_key() -> str | None:
+    global _anam_key_index
+    if not ANAM_KEYS:
+        return None
+    key = ANAM_KEYS[_anam_key_index % len(ANAM_KEYS)]
+    _anam_key_index += 1
+    return key
+
+
+class AnamTokenRequest(BaseModel):
+    avatar_name: str = "finn"   # default male avatar
+
+
+@router.post("/avatar/token")
+async def get_anam_token(req: AnamTokenRequest):
+    """
+    Returns an Anam session token for the chosen avatar.
+    Rotates across 5 API keys. Falls back to Simli config if all fail.
+    Avatar name: mia | layla | emily | finn | hunter | kevin
+    """
+    import httpx
+
+    persona_id     = ANAM_PERSONAS.get(req.avatar_name.lower(), ANAM_PERSONAS["finn"])
+    persona_config = {"personaId": persona_id}
+
+    # Try each Anam key in rotation
+    last_error = None
+    for _ in range(len(ANAM_KEYS)):
+        key = _next_anam_key()
+        if not key:
+            break
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(
+                    "https://api.anam.ai/v1/auth/session-token",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"personaConfig": persona_config},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return JSONResponse(content={
+                        "provider":     "anam",
+                        "sessionToken": data.get("sessionToken"),
+                        "personaId":    persona_id,
+                        "avatarName":   req.avatar_name.lower(),
+                    })
+                last_error = f"Anam {resp.status_code}: {resp.text[:200]}"
+                log.warning("Anam key failed: %s", last_error)
+        except Exception as e:
+            last_error = str(e)
+            log.warning("Anam key error: %s", e)
+
+    # All Anam keys failed — return Simli fallback config
+    simli_api  = os.getenv("SIMLI_API", "")
+    simli_face = os.getenv("SIMLI_FACE_ID", "")
+    if simli_api and simli_face:
+        log.info("Falling back to Simli avatar")
+        return JSONResponse(content={
+            "provider":  "simli",
+            "simliApi":  simli_api,
+            "faceId":    simli_face,
+        })
+
+    raise HTTPException(
+        status_code=503,
+        detail=f"All avatar providers failed. Last error: {last_error}",
+    )
+
+
+@router.get("/avatar/catalogue")
+async def avatar_catalogue():
+    """Returns the list of available avatars for the frontend selector."""
+    return JSONResponse(content={
+        "avatars": [
+            {"name": "finn",   "label": "Finn",   "gender": "male",   "personaId": ANAM_PERSONAS["finn"]},
+            {"name": "hunter", "label": "Hunter", "gender": "male",   "personaId": ANAM_PERSONAS["hunter"]},
+            {"name": "kevin",  "label": "Kevin",  "gender": "male",   "personaId": ANAM_PERSONAS["kevin"]},
+            {"name": "mia",    "label": "Mia",    "gender": "female", "personaId": ANAM_PERSONAS["mia"]},
+            {"name": "layla",  "label": "Layla",  "gender": "female", "personaId": ANAM_PERSONAS["layla"]},
+            {"name": "emily",  "label": "Emily",  "gender": "female", "personaId": ANAM_PERSONAS["emily"]},
+        ]
+    })
