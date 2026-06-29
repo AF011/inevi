@@ -1,0 +1,41 @@
+{
+  "name": "Inevi — Spatial AI Navigation",
+  "short_name": "Inevi",
+  "description": "AI-powered indoor spatial guide. Where Google Maps ends, Inevi begins.",
+  "start_url": "/traverse",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0D0D0D",
+  "theme_color": "#2EC4B6",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["navigation", "utilities", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Start Navigation",
+      "short_name": "Navigate",
+      "description": "Open VEDA and start navigating",
+      "url": "/traverse",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Map Studio",
+      "short_name": "Studio",
+      "description": "Build your indoor map",
+      "url": "/studio",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
