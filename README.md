@@ -24,7 +24,13 @@
 
 Google Maps stops at the front door. Inside malls, hospitals, university campuses, and museums, you are on your own. Inevi solves this.
 
-Inevi is a live camera-based indoor navigation system powered by a multi-agent AI pipeline. Point your camera at your surroundings, and a conversational AI guide identifies where you are, answers your questions, and walks you step by step to your destination — in English, Telugu, or Hindi.
+**Inevi is a video call with an AI that knows your space.**
+
+No extra hardware. No beacons. No QR codes. Just open Inevi on your phone, start a call with your AI guide, and point your camera around. The AI sees what you see, figures out where you are, and talks you through every step to your destination — exactly like calling a friend who knows the building.
+
+Anyone can map their own space using Map Studio. Upload photos of each location, describe what is there, draw the connections between spaces. Once mapped, that space is navigable by anyone who visits. A hospital administrator maps the corridors once. Every patient who walks in can call the AI and get guided to their ward, lab, or exit in their own language.
+
+No Google Maps integration needed. No internet-connected sensors. No installation. Just a phone call to an AI that has already learned your building.
 
 ---
 
