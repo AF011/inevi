@@ -12,7 +12,9 @@
 
 **AI-powered indoor spatial navigation. Real-time. Conversational. Multilingual.**
 
-[Live Demo](https://inevi.vercel.app) · [Map Studio](https://inevi.vercel.app/studio) · [Start Navigating](https://inevi.vercel.app/traverse)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-%E2%86%97-2EC4B6?style=for-the-badge)](https://inevi.vercel.app)
+[![Map Studio](https://img.shields.io/badge/Map%20Studio-%E2%86%97-2EC4B6?style=for-the-badge)](https://inevi.vercel.app/studio)
+[![Start Navigating](https://img.shields.io/badge/Start%20Navigating-%E2%86%97-2EC4B6?style=for-the-badge)](https://inevi.vercel.app/traverse)
 
 </div>
 
