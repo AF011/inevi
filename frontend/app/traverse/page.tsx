@@ -461,55 +461,55 @@ export default function TraversePage() {
         {/* ── Top bar ── */}
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0,
-          padding: "16px 20px",
+          padding: "12px 14px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: "8px",
         }}>
-          {/* Left: LIVE + location */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            {/* Live dot */}
+          {/* Left: LIVE badge only — keep minimal on mobile */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
             <div style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              background: "rgba(0,0,0,0.5)", borderRadius: "20px",
-              padding: "5px 12px", backdropFilter: "blur(8px)",
+              display: "flex", alignItems: "center", gap: "5px",
+              background: "rgba(0,0,0,0.55)", borderRadius: "20px",
+              padding: "5px 10px", backdropFilter: "blur(8px)",
             }}>
               <div style={{
-                width: "7px", height: "7px", borderRadius: "50%",
+                width: "6px", height: "6px", borderRadius: "50%",
                 background: callStatus === "live" ? "#ff4444" : "var(--text-dim)",
-                boxShadow: callStatus === "live" ? "0 0 6px #ff4444" : "none",
+                boxShadow: callStatus === "live" ? "0 0 5px #ff4444" : "none",
                 animation: callStatus === "live" ? "pulse 2s infinite" : "none",
               }} />
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#fff", letterSpacing: "0.06em" }}>
                 {callStatus === "live" ? "LIVE" : "ENDED"}
               </span>
             </div>
-
-            {/* Location pill */}
+            {/* Location pill — truncate on mobile */}
             {location?.matched && (
               <div style={{
-                display: "flex", alignItems: "center", gap: "6px",
+                display: "flex", alignItems: "center", gap: "5px",
                 background: "rgba(46,196,182,0.15)", borderRadius: "20px",
-                padding: "5px 12px", backdropFilter: "blur(8px)",
+                padding: "5px 10px", backdropFilter: "blur(8px)",
                 border: "1px solid rgba(46,196,182,0.3)",
+                maxWidth: "130px", overflow: "hidden",
               }}>
-                <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--accent)" }} />
-                <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--accent)" }}>
-                  {location.name} · {Math.round(location.confidence * 100)}%
+                <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />
+                <span style={{ fontSize: "10px", fontWeight: 600, color: "var(--accent)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {location.name}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Right: Language + controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {/* Language toggle */}
-            <div style={{ display: "flex", gap: "4px", background: "rgba(0,0,0,0.5)", borderRadius: "20px", padding: "4px", backdropFilter: "blur(8px)" }}>
+          {/* Right: compact controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+            {/* Language toggle — compact */}
+            <div style={{ display: "flex", gap: "2px", background: "rgba(0,0,0,0.55)", borderRadius: "20px", padding: "3px", backdropFilter: "blur(8px)" }}>
               {(["en", "te", "hi"] as Language[]).map(lang => (
                 <button key={lang} onClick={() => { setLanguage(lang); languageRef.current = lang; }} style={{
-                  padding: "4px 10px", borderRadius: "16px", border: "none",
+                  padding: "4px 8px", borderRadius: "14px", border: "none",
                   background: language === lang ? "var(--accent)" : "transparent",
                   color: language === lang ? "#000" : "rgba(255,255,255,0.6)",
-                  fontSize: "11px", fontWeight: 700, cursor: "pointer",
-                  transition: "all 0.15s",
+                  fontSize: "10px", fontWeight: 700, cursor: "pointer",
+                  transition: "all 0.15s", minWidth: "28px",
                 }}>
                   {LANG_LABELS[lang]}
                 </button>
@@ -518,42 +518,33 @@ export default function TraversePage() {
 
             {/* Flip camera */}
             <button onClick={switchCamera} style={{
-              width: "36px", height: "36px", borderRadius: "50%",
-              background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.15)",
+              width: "34px", height: "34px", borderRadius: "50%",
+              background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)",
               backdropFilter: "blur(8px)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontSize: "14px",
-            }} title="Flip camera">
-              🔄
-            </button>
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px",
+            }}>🔄</button>
 
             {/* IRIS log toggle */}
             <button onClick={() => setShowIrisLog(p => !p)} style={{
-              width: "36px", height: "36px", borderRadius: "50%",
-              background: showIrisLog ? "rgba(46,196,182,0.2)" : "rgba(0,0,0,0.5)",
-              border: `1px solid ${showIrisLog ? "rgba(46,196,182,0.5)" : "rgba(255,255,255,0.15)"}`,
+              width: "34px", height: "34px", borderRadius: "50%",
+              background: showIrisLog ? "rgba(46,196,182,0.2)" : "rgba(0,0,0,0.55)",
+              border: `1px solid ${showIrisLog ? "rgba(46,196,182,0.5)" : "rgba(255,255,255,0.12)"}`,
               backdropFilter: "blur(8px)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "13px",
-            }} title="IRIS log">
-              👁
-            </button>
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px",
+            }}>👁</button>
           </div>
         </div>
 
         {/* ── VEDA PiP — top right ── */}
-        <div style={{
-          position: "absolute", top: "72px", right: "20px",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
-        }}>
-          <VedaAvatar size={72} speaking={isSpeaking} />
+        <div className="veda-pip">
+          <VedaAvatar size={56} speaking={isSpeaking} />
           <div style={{
-            background: "rgba(0,0,0,0.6)", borderRadius: "12px",
-            padding: "4px 10px", backdropFilter: "blur(8px)",
+            background: "rgba(0,0,0,0.6)", borderRadius: "10px",
+            padding: "3px 8px", backdropFilter: "blur(8px)",
             textAlign: "center",
           }}>
-            <p style={{ fontSize: "10px", fontWeight: 700, color: "var(--accent)", letterSpacing: "0.06em" }}>VEDA</p>
-            <p style={{ fontSize: "9px", color: "rgba(255,255,255,0.5)", marginTop: "1px" }}>
+            <p style={{ fontSize: "9px", fontWeight: 700, color: "var(--accent)", letterSpacing: "0.06em" }}>VEDA</p>
+            <p style={{ fontSize: "8px", color: "rgba(255,255,255,0.5)", marginTop: "1px" }}>
               {isSpeaking ? "speaking" : isListening ? "listening" : "ready"}
             </p>
           </div>
@@ -561,10 +552,10 @@ export default function TraversePage() {
 
         {/* ── IRIS Log overlay (togglable) ── */}
         {showIrisLog && (
-          <div style={{
-            position: "absolute", top: "72px", left: "20px",
-            width: "300px", maxHeight: "220px", overflowY: "auto",
-            background: "rgba(0,0,0,0.75)", borderRadius: "12px",
+          <div className="iris-log-panel" style={{
+            position: "absolute", top: "60px", left: "14px",
+            maxHeight: "200px", overflowY: "auto",
+            background: "rgba(0,0,0,0.8)", borderRadius: "12px",
             padding: "12px", backdropFilter: "blur(12px)",
             border: "1px solid rgba(46,196,182,0.2)",
           }}>
@@ -583,11 +574,10 @@ export default function TraversePage() {
 
         {/* ── Last VEDA message — floating bottom left ── */}
         {lastVedaMsg && callStatus === "live" && !showChat && (
-          <div style={{
-            position: "absolute", bottom: "90px", left: "20px",
-            maxWidth: "360px",
-            background: "rgba(0,0,0,0.7)", borderRadius: "16px",
-            padding: "12px 16px", backdropFilter: "blur(12px)",
+          <div className="veda-bubble" style={{
+            position: "absolute", bottom: "88px", left: "12px",
+            background: "rgba(0,0,0,0.75)", borderRadius: "16px",
+            padding: "10px 14px", backdropFilter: "blur(12px)",
             border: "1px solid rgba(46,196,182,0.2)",
             animation: "fadeIn 0.3s ease",
           }}>
@@ -599,11 +589,10 @@ export default function TraversePage() {
 
         {/* ── Chat overlay — bottom left when open ── */}
         {showChat && (
-          <div style={{
-            position: "absolute", bottom: "90px", left: "20px",
-            width: "min(380px, calc(100vw - 120px))",
-            maxHeight: "300px",
-            background: "rgba(0,0,0,0.75)", borderRadius: "16px",
+          <div className="chat-panel" style={{
+            position: "absolute", bottom: "88px", left: "12px",
+            maxHeight: "260px",
+            background: "rgba(0,0,0,0.82)", borderRadius: "16px",
             backdropFilter: "blur(16px)",
             border: "1px solid rgba(255,255,255,0.08)",
             display: "flex", flexDirection: "column", overflow: "hidden",
@@ -654,101 +643,116 @@ export default function TraversePage() {
         )}
       </div>
 
-      {/* ── Bottom control bar ── (Google Meet style) */}
+      {/* ── Bottom control bar ── */}
       <div style={{
-        height: "80px", flexShrink: 0,
-        background: "#1a1a1a", borderTop: "1px solid #222",
+        height: "72px", flexShrink: 0,
+        background: "#161616", borderTop: "1px solid #222",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 24px",
+        padding: "0 16px",
+        paddingBottom: "env(safe-area-inset-bottom)",
       }}>
 
-        {/* Left: mic status */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "140px" }}>
+        {/* Left: mic status — hide label on mobile */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div style={{
-            width: "8px", height: "8px", borderRadius: "50%",
+            width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0,
             background: isListening ? "var(--success)" : isSpeaking ? "var(--accent)" : "#444",
             boxShadow: isListening ? "0 0 6px var(--success)" : isSpeaking ? "0 0 6px var(--accent)" : "none",
           }} />
-          <span style={{ fontSize: "12px", color: "#666" }}>
-            {isListening ? "Listening..." : isSpeaking ? "VEDA speaking" : "Mic standby"}
+          <span className="mic-label" style={{ fontSize: "11px", color: "#555" }}>
+            {isListening ? "Listening" : isSpeaking ? "Speaking" : "Standby"}
           </span>
         </div>
 
         {/* Center: action buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
 
           {/* Chat toggle */}
-          <button onClick={() => setShowChat(p => !p)} title="Chat" style={{
-            width: "48px", height: "48px", borderRadius: "50%",
-            background: showChat ? "rgba(46,196,182,0.2)" : "#2a2a2a",
+          <button onClick={() => setShowChat(p => !p)} style={{
+            width: "44px", height: "44px", borderRadius: "50%",
+            background: showChat ? "rgba(46,196,182,0.2)" : "#252525",
             border: `1px solid ${showChat ? "rgba(46,196,182,0.4)" : "#333"}`,
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "18px", transition: "all 0.2s",
-          }}>
-            💬
-          </button>
+            fontSize: "17px", transition: "all 0.2s",
+          }}>💬</button>
 
           {/* End call */}
           {callStatus === "live" && (
-            <button onClick={endCall} title="End call" style={{
-              width: "56px", height: "56px", borderRadius: "50%",
+            <button onClick={endCall} style={{
+              width: "52px", height: "52px", borderRadius: "50%",
               background: "#e05555", border: "none",
               cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 16px rgba(224,85,85,0.4)",
-              transition: "all 0.2s",
+              boxShadow: "0 4px 14px rgba(224,85,85,0.4)", transition: "all 0.2s",
             }}>
-              {/* Hang up icon */}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white" style={{ transform: "rotate(135deg)" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style={{ transform: "rotate(135deg)" }}>
                 <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
               </svg>
             </button>
           )}
 
-          {/* New call (after ended) */}
+          {/* New call — same size as end call button */}
           {callStatus === "ended" && (
             <button onClick={() => {
               setCallStatus("idle"); setMessages([]); setLocation(null);
               setSceneText(""); setSessionId(""); sessionIdRef.current = "";
               speechQueueRef.current = []; setLastVedaMsg("");
             }} style={{
-              padding: "12px 28px", borderRadius: "28px",
-              background: "var(--accent)", color: "#000",
-              border: "none", fontSize: "14px", fontWeight: 700,
-              cursor: "pointer", fontFamily: "'Inter', sans-serif",
+              width: "52px", height: "52px", borderRadius: "50%",
+              background: "var(--accent)", border: "none",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 4px 14px rgba(46,196,182,0.3)", transition: "all 0.2s",
             }}>
-              New Call
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#000">
+                <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
+              </svg>
             </button>
           )}
 
           {/* IRIS log toggle */}
-          <button onClick={() => setShowIrisLog(p => !p)} title="Vision log" style={{
-            width: "48px", height: "48px", borderRadius: "50%",
-            background: showIrisLog ? "rgba(46,196,182,0.2)" : "#2a2a2a",
+          <button onClick={() => setShowIrisLog(p => !p)} style={{
+            width: "44px", height: "44px", borderRadius: "50%",
+            background: showIrisLog ? "rgba(46,196,182,0.2)" : "#252525",
             border: `1px solid ${showIrisLog ? "rgba(46,196,182,0.4)" : "#333"}`,
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "18px", transition: "all 0.2s",
-          }}>
-            👁
-          </button>
+            fontSize: "16px", transition: "all 0.2s",
+          }}>👁</button>
         </div>
 
-        {/* Right: session info */}
-        <div style={{ minWidth: "140px", textAlign: "right" }}>
+        {/* Right: confidence — hide on very small screens */}
+        <div className="conf-label" style={{ textAlign: "right" }}>
           {location?.matched ? (
-            <div>
-              <p style={{ fontSize: "11px", color: "var(--accent)", fontWeight: 600 }}>{location.name}</p>
-              <p style={{ fontSize: "10px", color: "#444", marginTop: "2px" }}>{Math.round(location.confidence * 100)}% match</p>
-            </div>
+            <>
+              <p style={{ fontSize: "10px", color: "var(--accent)", fontWeight: 600, maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{location.name}</p>
+              <p style={{ fontSize: "9px", color: "#444", marginTop: "1px" }}>{Math.round(location.confidence * 100)}%</p>
+            </>
           ) : (
-            <p style={{ fontSize: "11px", color: "#444" }}>Scanning...</p>
+            <p style={{ fontSize: "10px", color: "#444" }}>Scanning</p>
           )}
         </div>
       </div>
 
       <style>{`
-        @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @keyframes wave    { from{transform:scaleY(0.5)} to{transform:scaleY(1.5)} }
-        @keyframes fadeIn  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes wave   { from{transform:scaleY(0.5)} to{transform:scaleY(1.5)} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+        /* Desktop defaults */
+        .veda-pip      { position:absolute; top:62px; right:16px; display:flex; flex-direction:column; align-items:center; gap:5px; }
+        .iris-log-panel{ width:290px; }
+        .chat-panel    { width:min(360px, calc(100vw - 100px)); }
+        .veda-bubble   { max-width:340px; }
+        .mic-label     { display:inline; }
+        .conf-label    { min-width:80px; }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+          .veda-pip       { top:58px; right:12px; }
+          .iris-log-panel { width:calc(100vw - 28px); }
+          .chat-panel     { width:calc(100vw - 24px); left:12px !important; }
+          .veda-bubble    { max-width:calc(100vw - 80px); }
+          .mic-label      { display:none; }
+          .conf-label     { display:none; }
+        }
       `}</style>
     </div>
   );
