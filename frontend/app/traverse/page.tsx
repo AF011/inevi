@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const ANAM_SDK = "https://esm.sh/@anam-ai/js-sdk";
-const FRAME_INTERVAL_MS = 4000;
+const FRAME_INTERVAL_MS = 6000;  // 6s to reduce Groq API usage
 
 interface Message  { role: "veda" | "user"; content: string; time: string; }
 interface LocationInfo { matched: boolean; node_id: string | null; name: string | null; confidence: number; }
@@ -34,7 +34,10 @@ export default function TraversePage() {
   const streamRef       = useRef<MediaStream | null>(null);
   const frameTimerRef   = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef  = useRef<any>(null);
-  const anamClientRef   = useRef<any>(null);
+  const anamClientRef    = useRef<any>(null);
+  const avatarReadyRef   = useRef(false);  // sync ref so anamTalk can check instantly
+  const anamSpeakingRef = useRef(false);   // true when WE are making avatar talk
+  const idleGuardRef    = useRef<any>(null); // kills Anam LLM voice every 5s
 
   // ── State ───────────────────────────────────────────────────────
   const [callStatus,   setCallStatus]   = useState<CallStatus>("idle");
@@ -67,6 +70,7 @@ export default function TraversePage() {
   useEffect(() => { callStatusRef.current  = callStatus;  }, [callStatus]);
   useEffect(() => { sessionIdRef.current   = sessionId;   }, [sessionId]);
   useEffect(() => { languageRef.current    = language;    }, [language]);
+  useEffect(() => { avatarReadyRef.current = avatarReady;  }, [avatarReady]);
 
   // ── Add message ─────────────────────────────────────────────────
   const addMessage = useCallback((role: "veda"|"user", content: string) => {
@@ -76,19 +80,40 @@ export default function TraversePage() {
     setTimeout(() => chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }), 100);
   }, []);
 
-  // ── Anam: speak via avatar ──────────────────────────────────────
+  // ── Anam: speak via avatar ───────────────────────────────────────
   const anamTalk = useCallback(async (text: string) => {
-    if (!anamClientRef.current || !avatarReady) return false;
-    try {
-      await anamClientRef.current.talk(text);
-      return true;
-    } catch (e) {
-      console.error("[anam] talk error:", e);
-      return false;
-    }
+    if (!anamClientRef.current || !avatarReadyRef.current) return false;
+    return new Promise<boolean>((resolve) => {
+      anamSpeakingRef.current = true;
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        anamSpeakingRef.current = false;
+        resolve(true);
+      };
+      // Listen for talk end events
+      try {
+        const client = anamClientRef.current;
+        const onEnd = () => { finish(); };
+        // Try to listen for end event — fallback to timeout
+        try {
+          client.addListener("MESSAGE_NODE_TALK_END", onEnd);
+          client.addListener("TALK_STREAM_INTERRUPTED", onEnd);
+        } catch {}
+        // Fallback timeout based on text length
+        setTimeout(finish, Math.max(3000, text.length * 60) + 2000);
+        // Actually speak
+        client.talk(text).catch(() => finish());
+      } catch {
+        anamSpeakingRef.current = false;
+        resolve(false);
+      }
+    });
   }, [avatarReady]);
 
   const anamStop = useCallback(() => {
+    anamSpeakingRef.current = false;
     if (!anamClientRef.current) return;
     try { anamClientRef.current.interruptPersona(); } catch {}
   }, []);
@@ -194,7 +219,7 @@ export default function TraversePage() {
   }, [addMessage, anamStop]);
 
   // ── Init Anam avatar ────────────────────────────────────────────
-  const initAnamAvatar = useCallback(async (avatarName: string) => {
+  const initAnamAvatar = useCallback(async (avatarName: string, greetingText?: string) => {
     if (anamClientRef.current) return;
     try {
       const res = await fetch(`${API}/api/avatar/token`, {
@@ -211,15 +236,31 @@ export default function TraversePage() {
       const client = _cc(data.sessionToken, { disableInputAudio: true });
       anamClientRef.current = client;
 
-      // Stop Anam's own greeting immediately on connect
+      // On connect: stop LLM speech + start idle guard (friend's exact pattern)
       client.addListener(_AE.CONNECTION_ESTABLISHED, () => {
         try { client.interruptPersona(); } catch {}
+        // Kill Anam LLM voice every 8s whenever WE are not speaking
+        idleGuardRef.current = setInterval(() => {
+          if (!anamSpeakingRef.current && anamClientRef.current) {
+            try { anamClientRef.current.interruptPersona(); } catch {}
+          }
+        }, 8000);
       });
 
-      // Stop again when session is ready (in case greeting already started)
       client.addListener(_AE.SESSION_READY, () => {
         try { client.interruptPersona(); } catch {}
+        // Set ref immediately (sync) so anamTalk works right away
+        avatarReadyRef.current = true;
         setAvatarReady(true);
+        // Speak greeting through avatar after short delay
+        if (greetingText) {
+          setTimeout(() => vedaSpeak(greetingText), 800);
+        }
+      });
+
+      client.addListener(_AE.CONNECTION_CLOSED, () => {
+        clearInterval(idleGuardRef.current);
+        idleGuardRef.current = null;
       });
 
       // Attach stream directly to ref when video starts
@@ -228,12 +269,15 @@ export default function TraversePage() {
           avatarVideoRef.current.srcObject = stream;
           avatarVideoRef.current.style.display = "block";
           avatarVideoRef.current.play()
-            .then(() => setAvatarReady(true))
-            .catch(() => setAvatarReady(true));
+            .then(() => { avatarReadyRef.current = true; setAvatarReady(true); })
+            .catch(() => { avatarReadyRef.current = true; setAvatarReady(true); });
         }
       });
 
-      client.addListener(_AE.VIDEO_PLAY_STARTED, () => setAvatarReady(true));
+      client.addListener(_AE.VIDEO_PLAY_STARTED, () => {
+        avatarReadyRef.current = true;
+        setAvatarReady(true);
+      });
 
       // Start streaming
       const streams = await client.stream();
@@ -328,7 +372,8 @@ export default function TraversePage() {
       setCallStatus("live");
       callStatusRef.current = "live";
 
-      if (data.veda_response) vedaSpeak(data.veda_response);
+      // Store greeting to speak after avatar connects
+      const greetingText = data.veda_response;
 
       const sid = data.session_id;
       frameTimerRef.current = setInterval(() => {
@@ -336,10 +381,11 @@ export default function TraversePage() {
         if (frame) sendFrame(frame, sid);
       }, FRAME_INTERVAL_MS);
 
-      setTimeout(() => restartListening(), 3000);
+      // Init Anam AFTER React renders live UI
+      setTimeout(() => initAnamAvatar(selectedAvatar, greetingText), 300);
 
-      // Init Anam AFTER React renders the live call UI (so avatarVideoRef exists in DOM)
-      setTimeout(() => initAnamAvatar(selectedAvatar), 300);
+      // Start listening after greeting delay
+      setTimeout(() => restartListening(), 5000);
 
     } catch {
       setCallStatus("idle");
@@ -354,6 +400,9 @@ export default function TraversePage() {
     try { recognitionRef.current?.stop(); } catch {}
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     try { anamClientRef.current?.stopStreaming(); } catch {}
+    clearInterval(idleGuardRef.current);
+    idleGuardRef.current = null;
+    anamSpeakingRef.current = false;
     window.speechSynthesis?.cancel();
     speechQueueRef.current  = [];
     isSpeakingQRef.current  = false;
