@@ -125,49 +125,70 @@ def identify_destination(
 ) -> dict:
     """
     Extract the user's destination from their speech.
-    Returns matched node_id if found in connected nodes.
+    First tries fast keyword match, then LLM fallback.
     """
-    ctx = get_location_context(current_node)
-    if not ctx:
+    from backend.services.aurora import get_all_locations as _get_all
+    import re as _re
+
+    try:
+        all_locs = [dict(l) for l in _get_all()]
+    except Exception:
+        all_locs = []
+
+    if not all_locs:
         return {"found": False, "node_id": None, "name": None}
 
-    connections  = ctx.get("connections", [])
-    all_locs_raw = __import__("backend.services.aurora", fromlist=["get_all_locations"]).get_all_locations()
-    all_locs     = [dict(l) for l in all_locs_raw]
+    user_lower = user_input.lower().strip()
 
-    # Build location list for LLM
+    # ── Fast keyword match first (no LLM needed) ──
+    # Check if any location name words appear in user speech
+    for loc in all_locs:
+        name_lower = loc["name"].lower()
+        node_lower = loc["node_id"].lower().replace("_", " ")
+
+        # Direct name match
+        if name_lower in user_lower:
+            return {"found": True, "node_id": loc["node_id"], "name": loc["name"]}
+
+        # Node words match (e.g. "kitchen" matches "home_kitchen")
+        node_words = [w for w in node_lower.split() if len(w) > 3]
+        if any(w in user_lower for w in node_words):
+            return {"found": True, "node_id": loc["node_id"], "name": loc["name"]}
+
+        # Name words match (e.g. "library" matches "VIT-AP University Library")
+        name_words = [w for w in name_lower.split() if len(w) > 3]
+        if any(w in user_lower for w in name_words):
+            return {"found": True, "node_id": loc["node_id"], "name": loc["name"]}
+
+    # ── LLM fallback for fuzzy matches ──
     locs_text = "\n".join([
-        f"- {loc['node_id']}: {loc['name']}"
+        f"- node_id: {loc['node_id']} | name: {loc['name']}"
         for loc in all_locs
     ])
 
     prompt = f"""The user said: "{user_input}"
 
-Available locations in this building:
+Available locations:
 {locs_text}
 
-The user wants to go somewhere. Identify which location they mean.
-
-Return ONLY valid JSON:
+Which location does the user want to go to?
+Return ONLY valid JSON (no markdown):
 {{
   "found": true or false,
-  "node_id": "matching node_id or null",
-  "name": "matching location name or null",
-  "reason": "brief explanation"
+  "node_id": "exact node_id from list or null",
+  "name": "exact name from list or null",
+  "reason": "why"
 }}"""
 
-    resp = client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=150,
-        temperature=0.1,
-    )
-
-    raw = resp.choices[0].message.content.strip()
-    import re
-    raw = re.sub(r"^```[a-z]*\n?", "", raw).rstrip("`").strip()
-
     try:
+        resp = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150,
+            temperature=0.1,
+        )
+        raw = resp.choices[0].message.content.strip()
+        raw = _re.sub(r"^```[a-z]*\n?", "", raw).rstrip("`").strip()
         return json.loads(raw)
     except Exception:
         return {"found": False, "node_id": None, "name": None}

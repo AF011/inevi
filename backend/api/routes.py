@@ -338,6 +338,10 @@ async def traverse_frame(req: TraverseFrameRequest):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
+        # Keep session language in sync with what frontend sends
+        if req.language and req.language != session["language"]:
+            session["language"] = req.language
+
         result = process_frame(
             session=session,
             image_b64=req.image_b64,
@@ -375,15 +379,30 @@ async def traverse_speech(req: TraverseSpeechRequest):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
+        # Keep session language in sync with what frontend sends
+        if req.language and req.language != session["language"]:
+            session["language"] = req.language
+
         result = process_user_speech(
             session=session,
             user_speech=req.user_speech,
         )
 
+        # Don't send anything back if echo was filtered
+        intent_type = result["intent"].get("intent", "unknown")
+        if intent_type == "echo_ignored":
+            return JSONResponse(content={
+                "session_id":    req.session_id,
+                "veda_response": None,
+                "intent":        "echo_ignored",
+                "destination":   None,
+                "status":        result["session"]["status"],
+            })
+
         return JSONResponse(content={
             "session_id":    req.session_id,
             "veda_response": result["veda_response"],
-            "intent":        result["intent"]["intent"],
+            "intent":        intent_type,
             "destination":   result["intent"].get("destination"),
             "status":        result["session"]["status"],
         })
