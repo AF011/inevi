@@ -171,5 +171,5 @@ AWS Services used: Aurora DSQL, DynamoDB, S3
 ---
 
 <div align="center">
-  <sub>An AF's Endeavor &nbsp;|&nbsp; Developed with a cup of tea and one big idea</sub>
+  <sub>An AF's Endeavor &nbsp;|&nbsp; Developed with 🥤 and 💡</sub>
 </div>
