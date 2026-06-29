@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "backend/main.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     },
     {
       "src": "frontend/package.json",
@@ -19,5 +22,10 @@
       "src": "/(.*)",
       "dest": "frontend/$1"
     }
-  ]
+  ],
+  "functions": {
+    "backend/main.py": {
+      "maxDuration": 60
+    }
+  }
 }

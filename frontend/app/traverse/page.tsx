@@ -297,15 +297,24 @@ export default function TraversePage() {
 
   // ── Camera ──────────────────────────────────────────────────────
   const startCamera = async (facing: "environment"|"user" = "environment") => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
-      return true;
-    } catch { return false; }
+    // Try ideal constraints first, fall back to basic if fails
+    const constraints = [
+      { video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      { video: { facingMode: facing }, audio: false },
+      { video: true, audio: false },
+    ];
+    for (const constraint of constraints) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraint);
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        return true;
+      } catch {}
+    }
+    return false;
   };
 
   const captureFrame = (): string | null => {
@@ -387,7 +396,8 @@ export default function TraversePage() {
       // Start listening after greeting delay
       setTimeout(() => restartListening(), 5000);
 
-    } catch {
+    } catch (err: any) {
+      console.error("[startCall] failed:", err?.message ?? err);
       setCallStatus("idle");
       callStatusRef.current = "idle";
     }
