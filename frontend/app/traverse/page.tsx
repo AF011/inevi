@@ -56,6 +56,7 @@ export default function TraversePage() {
   const [selectedAvatar, setSelectedAvatar] = useState<string>("finn");
   const [avatarReady,  setAvatarReady]  = useState(false);
   const [avatarError,  setAvatarError]  = useState(false);
+  const [startError,   setStartError]   = useState("");
 
   // ── Refs that closures need fresh ───────────────────────────────
   const isSpeakingRef   = useRef(false);
@@ -397,9 +398,10 @@ export default function TraversePage() {
       setTimeout(() => restartListening(), 5000);
 
     } catch (err: any) {
-      console.error("[startCall] failed:", err?.message ?? err);
-      setCallStatus("idle");
-      callStatusRef.current = "idle";
+      const msg = err?.message ?? String(err);
+      console.error("[startCall] failed:", msg);
+      setStartError(msg);
+      setTimeout(() => { setCallStatus("idle"); callStatusRef.current = "idle"; setStartError(""); }, 3000);
     }
   };
 
@@ -615,6 +617,7 @@ export default function TraversePage() {
       <div style={{
         height: "calc(100vh - 56px)", display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center", background: "#000", gap: "20px",
+        padding: "24px",
       }}>
         <div style={{
           width: "80px", height: "80px", borderRadius: "50%",
@@ -631,6 +634,11 @@ export default function TraversePage() {
             {avatar?.label}
           </p>
           <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>Connecting...</p>
+          {startError && (
+            <p style={{ fontSize: "11px", color: "#e05555", marginTop: "8px", maxWidth: "280px" }}>
+              Error: {startError}
+            </p>
+          )}
         </div>
       </div>
     );
